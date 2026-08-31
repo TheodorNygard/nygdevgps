@@ -9,6 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # Step-level `if` cannot read the secrets context, so resolve it once here.
+    env:
+      HAS_AUTH_KEY: ${{ secrets.GPSPUSH_AUTH_KEY != '' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +28,16 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
 
+      # The Azure function key is never committed; it is baked into the APK here
+      # from a repository secret. Without it the APK builds but uploads 401.
       - name: Build debug APK
+        env:
+          GPSPUSH_AUTH_KEY: ${{ secrets.GPSPUSH_AUTH_KEY }}
         run: ./gradlew --no-daemon assembleDebug
+
+      - name: Warn if the APK has no auth key
+        if: env.HAS_AUTH_KEY != 'true'
+        run: echo "::warning::GPSPUSH_AUTH_KEY secret is not set - this APK will get 401 from the Function App."
 
       # Debug-signed, so it installs on the phone with no extra steps.
       - name: Upload APK
