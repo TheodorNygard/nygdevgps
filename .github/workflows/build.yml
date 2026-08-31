@@ -1,0 +1,36 @@
+name: Build APK
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Install Android platform 36
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
+
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+
+      # Debug-signed, so it installs on the phone with no extra steps.
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpspush-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
