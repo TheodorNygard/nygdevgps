@@ -5,7 +5,7 @@ package com.example.gpspush
 // ---------------------------------------------------------------------------
 
 /** Where fixes are POSTed. Must be https. */
-const val ENDPOINT = "https://example.com/gps"
+const val ENDPOINT = "https://func-nygdev-api.azurewebsites.net/api/gps/locations"
 
 /** How often the GPS chip produces a fix, in milliseconds. */
 const val INTERVAL_MS = 10_000L
@@ -17,11 +17,22 @@ const val INTERVAL_MS = 10_000L
  */
 const val BATCH_WINDOW_MS = 60_000L
 
-/** Name of the auth header sent with every upload. */
-const val AUTH_HEADER_NAME = "X-Api-Key"
+/**
+ * Name of the auth header sent with every upload. Azure Functions accepts its
+ * function key here, which keeps it out of the request URL (and so out of the
+ * App Insights request log).
+ */
+const val AUTH_HEADER_NAME = "x-functions-key"
 
-/** Value of the auth header. If blank, no auth header is sent at all. */
-const val AUTH_HEADER_VALUE = ""
+/**
+ * Value of the auth header — the Azure function key. If blank, no auth header
+ * is sent at all.
+ *
+ * Injected at build time, never committed: put `gpspush.authKey=<key>` in
+ * `local.properties`, pass `-Pgpspush.authKey=<key>`, or set `GPSPUSH_AUTH_KEY`
+ * in the environment. See `app/build.gradle.kts`.
+ */
+val AUTH_HEADER_VALUE: String = BuildConfig.AUTH_HEADER_VALUE
 
 // ---------------------------------------------------------------------------
 // Rarely touched

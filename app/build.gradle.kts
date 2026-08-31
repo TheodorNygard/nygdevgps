@@ -1,9 +1,36 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+/**
+ * The Azure function key, kept out of git. First hit wins:
+ *   -Pgpspush.authKey=<key>          one-off command line builds
+ *   local.properties                 Android Studio (gitignored)
+ *   GPSPUSH_AUTH_KEY                 CI, from a repository secret
+ * Blank is allowed — the app then sends no auth header at all.
+ */
+val gpsAuthKey: String = run {
+    val fromLocalProperties: String? = rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.let { file -> Properties().apply { file.inputStream().use { stream -> load(stream) } } }
+        ?.getProperty("gpspush.authKey")
+
+    val fromCommandLine = findProperty("gpspush.authKey") as String?
+    val fromEnvironment: String? = System.getenv("GPSPUSH_AUTH_KEY")
+
+    fromCommandLine ?: fromLocalProperties ?: fromEnvironment ?: ""
+}
+
+if (gpsAuthKey.isBlank()) {
+    logger.warn(
+        "gpspush: no auth key configured, the APK will POST without an auth header " +
+            "and Azure will reject uploads with 401. Set gpspush.authKey or GPSPUSH_AUTH_KEY."
+    )
 }
 
 android {
@@ -16,6 +43,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "AUTH_HEADER_VALUE",
+            "\"${gpsAuthKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
     }
 
     buildTypes {
@@ -32,6 +65,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

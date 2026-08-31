@@ -52,11 +52,28 @@ Everything you'll want to edit is at the top of
 
 | Constant | Default | What it does |
 | --- | --- | --- |
-| `ENDPOINT` | `https://example.com/gps` | Where batches are POSTed. **Set this first.** |
+| `ENDPOINT` | `…/api/gps/locations` | Where batches are POSTed. Currently the Azure Function App. |
 | `INTERVAL_MS` | `10_000` | How often the GPS chip produces a fix. |
 | `BATCH_WINDOW_MS` | `60_000` | How long the chip may hold fixes before handing them over as a batch. |
-| `AUTH_HEADER_NAME` | `"X-Api-Key"` | Auth header name. |
-| `AUTH_HEADER_VALUE` | `""` | Auth header value. **If blank, no auth header is sent at all.** |
+| `AUTH_HEADER_NAME` | `"x-functions-key"` | Auth header name — the Azure function key goes in this header rather than in a `?code=` query param, so it stays out of the request URL and the App Insights log. |
+| `AUTH_HEADER_VALUE` | *(injected at build time)* | Auth header value. **If blank, no auth header is sent at all.** |
+
+### The function key
+
+This repo is public, so the key is never committed — GitHub's push protection
+blocks it anyway. It is injected into `BuildConfig` at build time, first hit
+winning:
+
+1. `-Pgpspush.authKey=<key>` on the Gradle command line
+2. `gpspush.authKey=<key>` in `local.properties` (gitignored — use this in
+   Android Studio)
+3. `GPSPUSH_AUTH_KEY` in the environment — how CI gets it, from the repository
+   secret of the same name (Settings → Secrets and variables → Actions)
+
+Build with none of them set and you get a working APK that sends no auth header,
+which the Function App answers with 401; Gradle prints a warning saying so, and
+the CI run adds a warning annotation. Rotating the key means updating whichever
+of the three you use — nothing in git changes.
 
 Below those are things you'll rarely touch: spool file name, the ~4 MB / 20000
 line cap, HTTP timeouts, the 30 s wakelock timeout.
