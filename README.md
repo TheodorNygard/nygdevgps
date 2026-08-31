@@ -18,6 +18,26 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 or open the project in Android Studio and run it.
 
+### Or let GitHub build it for you
+
+`.github/workflows/build.yml` builds a debug APK on every push, and on demand
+from the Actions tab ("Build APK" → Run workflow). Open the finished run and
+download the `gpspush-debug-<run number>` artifact — a zip containing
+`app-debug.apk`.
+
+Straight onto the phone, no computer involved: open the run page in Chrome on
+the Pixel, tap the artifact to download it, open it from Files, extract, and tap
+the APK. Android will ask once whether Files (or Chrome) may install unknown
+apps. With a cable it's just `adb install -r app-debug.apk`.
+
+One wrinkle: CI signs with a throwaway debug key that differs from run to run,
+and from the one Android Studio uses. Installing a CI build over an existing
+install fails with a signature mismatch — `adb uninstall com.example.gpspush`
+first, or long-press the icon and uninstall. That wipes the spool file and the
+last-upload timestamp, so do it when nothing is queued. If you install from CI
+often enough for that to grate, generate a keystore once, put it in repo secrets
+and add a real `signingConfig` — then updates install straight over the top.
+
 > The sandbox this was written in blocks `dl.google.com`, so the Android SDK and
 > the AGP/androidx artifacts could not be downloaded and the project was never
 > put through a compiler here. If Android Studio complains about a version, the
